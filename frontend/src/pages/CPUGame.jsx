@@ -9,7 +9,34 @@ const CPUGame = () => {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [turn, setTurn] = useState('X');
   const [winner, setWinner] = useState(null);
+  const [playerXWins, setPlayerXWins] = useState(
+    parseInt(localStorage.getItem('playerXWins')) || 0
+  );
+  const [playerOWins, setPlayerOWins] = useState(
+    parseInt(localStorage.getItem('playerOWins')) || 0
+  );
+  const [totalGamesPlayed, setTotalGamesPlayed] = useState(
+    parseInt(localStorage.getItem('totalGamesPlayed')) || 0
+  );
+  const [totalDrawGames, setTotalDrawGames] = useState(0);
 
+  const updatePlayerWins = (player) => {
+    if (player === 'X') {
+      setPlayerXWins((prev) => prev + 1);
+      localStorage.setItem('playerXWins', playerXWins + 1);
+    } else if (player === 'O') {
+      setPlayerOWins((prev) => prev + 1);
+      localStorage.setItem('playerOWins', playerOWins + 1);
+    }
+    setTotalGamesPlayed((prev) => prev + 1);
+    localStorage.setItem('totalGamesPlayed', totalGamesPlayed + 1);
+  };
+
+  const getPlayerWinPercentage = (playerWins) => {
+    return totalGamesPlayed === 0
+      ? 0
+      : ((playerWins / totalGamesPlayed) * 100).toFixed(2);
+  };
   const makeMove = (index, player) => {
     if (board[index] === null && !winner) {
       const newBoard = board.slice();
@@ -19,6 +46,7 @@ const CPUGame = () => {
       const result = checkWinner(newBoard);
       if (result === 'draw') {
         setWinner('draw');
+        setTotalDrawGames((prev) => prev + 1);
         return toast.success("It's a draw!", {
           style: {
             border: '1px solid #004f71',
@@ -33,6 +61,7 @@ const CPUGame = () => {
         });
       } else if (result) {
         setWinner(result);
+        updatePlayerWins(result);
       } else {
         return setTurn(player === 'X' ? 'O' : 'X');
       }
@@ -172,8 +201,69 @@ const CPUGame = () => {
     cpuMove();
   }, [board, turn, winner]);
 
+  useEffect(() => {
+    // Load stats from localStorage when the component mounts
+    const playerXWins = parseInt(localStorage.getItem('playerXWins')) || 0;
+    const playerOWins = parseInt(localStorage.getItem('playerOWins')) || 0;
+    const totalGamesPlayed =
+      parseInt(localStorage.getItem('totalGamesPlayed')) || 0;
+
+    setPlayerXWins(playerXWins);
+    setPlayerOWins(playerOWins);
+    setTotalGamesPlayed(totalGamesPlayed);
+
+    // Add an event listener for when the user leaves the website or route
+    const handleUnload = () => {
+      // Clear stats from localStorage
+      localStorage.removeItem('playerXWins');
+      localStorage.removeItem('playerOWins');
+      localStorage.removeItem('totalGamesPlayed');
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <div className="overflow-x-auto max-w-4xl w-full">
+        <table className="max-w-4xl w-full bg-white border border-gray-300 rounded-lg shadow-lg mb-4">
+          <thead>
+            <tr className="bg-slate-900 text-white text-left">
+              <th className="text-lg font-bold p-2">Player</th>
+              <th className="text-lg font-bold p-2">Wins</th>
+              <th className="text-lg font-bold p-2">Win %</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="p-2 text-md font-semibold">Player X</td>
+              <td className="p-2 text-md">{playerXWins}</td>
+              <td className="p-2 text-md">
+                {getPlayerWinPercentage(playerXWins)}%
+              </td>
+            </tr>
+            <tr>
+              <td className="p-2 text-md font-semibold">Player O</td>
+              <td className="p-2 text-md">{playerOWins}</td>
+              <td className="p-2 text-md">
+                {getPlayerWinPercentage(playerOWins)}%
+              </td>
+            </tr>
+            <tr>
+              <td className="p-2 text-md font-semibold">Draw Games</td>
+              <td className="p-2 text-md" colSpan="2">
+                {totalDrawGames}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       {winner && (
         <Fireworks
           options={{ opacity: 0.5 }}
