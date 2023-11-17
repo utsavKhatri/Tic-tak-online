@@ -3,20 +3,22 @@ import socketIOClient from 'socket.io-client';
 import '../App.css';
 import { TbArrowsJoin, TbHomePlus } from 'react-icons/tb';
 import { MdRestartAlt } from 'react-icons/md';
-const ENDPOINT = 'http://localhost:5000';
+const ENDPOINT = 'http://192.168.29.68:5000';
 import { Fireworks } from '@fireworks-js/react';
 import toast from 'react-hot-toast';
 import { useParams } from 'react-router-dom';
+import copy from 'copy-to-clipboard';
 
 const Game = () => {
   const { id } = useParams();
   const [socket, setSocket] = useState(null);
-  const [roomId, setRoomId] = useState('');
+  const [roomId, setRoomId] = useState(id);
   const [player, setPlayer] = useState(null);
   const [turn, setTurn] = useState(null);
   const [board, setBoard] = useState(Array(9).fill(null));
   const [winner, setWinner] = useState(null);
   const [isCreated, setIsCreated] = useState(false);
+  const [isBothPlayersJoined, setIsBothPlayersJoined] = useState(false);
 
   const restartGame = () => {
     if (socket) {
@@ -38,7 +40,7 @@ const Game = () => {
       setTurn(turn);
     });
 
-    socket.on('updateBoard', ({ board, winner, turn }) => {
+    socket.on('updateBoard', ({ board, isXNext, winner, turn }) => {
       setBoard(board);
       if (winner != null) {
         if (winner === 'draw') {
@@ -46,16 +48,19 @@ const Game = () => {
         }
         toast('🎊 Congratulations! winner : ' + winner);
       }
-      setWinner(winner);
       setTurn(turn);
+      setWinner(winner);
+      if (isXNext !== undefined) {
+        setIsBothPlayersJoined(true);
+      }
     });
 
     socket.on('roomError', ({ message }) => {
-      toast(message);
+      toast.error(message);
     });
 
     socket.on('moveError', ({ message }) => {
-      toast(message);
+      toast.error(message);
     });
 
     return () => {
@@ -66,7 +71,7 @@ const Game = () => {
   const createRoom = () => {
     if (socket) {
       setIsCreated(true);
-      socket.emit('createRoom', id);
+      socket.emit('createRoom', roomId);
     }
   };
 
@@ -77,18 +82,18 @@ const Game = () => {
   };
 
   const makeMove = (index) => {
-    if (socket) {
+    if (turn == player || board[index] == null) {
       socket.emit('makeMove', { roomId, index, player });
     }
   };
 
   const getStatus = () => {
     if (winner) {
-      return `Winner: ${winner}`;
-    } else if (board.every((cell) => cell !== null)) {
-      return 'Draw!';
+      return winner === 'draw' ? "It's a draw!" : `Player ${winner} won!`;
+    } else if (!isCreated || !isBothPlayersJoined) {
+      return 'Waiting for players...';
     } else {
-      return `Next player: ${turn}`;
+      return turn ? `Next player: ${turn}` : '';
     }
   };
 
@@ -97,42 +102,40 @@ const Game = () => {
       {winner && (
         <Fireworks
           options={{ opacity: 0.5 }}
-          style={{
-            top: 0,
-            left: 0,
-            position: 'fixed',
-            width: '100%',
-            height: '65%',
-            background: 'transparent',
-          }}
+          className="fixed top-0 left-0 w-full h-65% bg-transparent"
         />
       )}
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-8 grid grid-cols-3 grid-rows-3 gap-4">
-        {Array(9)
-          .fill(null)
-          .map((_, i) => (
-            <button
-              key={i + 1}
-              className={`w-16 h-16 md:w-24 md:h-24 text-4xl font-bold border border-gray-300 rounded transition-colors focus:outline-none ${
-                board[i] === 'X'
-                  ? 'text-blue-600 hover:bg-blue-100'
-                  : 'text-red-600 hover:bg-red-100'
-              }`}
-              onClick={() => makeMove(i)}
-            >
-              {board[i]}
-            </button>
-          ))}
-      </div>
-      <div className="bg-white rounded-lg shadow-lg p-6 flex md:flex-row flex-col items-center gap-4 max-w-4xl w-full">
+
+      {isBothPlayersJoined && (
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8 grid grid-cols-3 grid-rows-3 gap-4">
+          {Array(9)
+            .fill(null)
+            .map((_, i) => (
+              <button
+                key={i + 1}
+                className={`w-16 h-16 md:w-24 md:h-24 text-4xl font-bold border border-gray-300 rounded transition-colors focus:outline-none ${
+                  board[i] === 'X'
+                    ? 'text-blue-600 hover:bg-blue-100'
+                    : 'text-red-600 hover:bg-red-100'
+                }`}
+                onClick={() => makeMove(i)}
+              >
+                {board[i]}
+              </button>
+            ))}
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg justify-evenly shadow-lg p-6 flex md:flex-row flex-col items-center gap-4 max-w-4xl w-full">
         {getStatus() !== 'Next player: null' && (
-          <div className="w-max whitespace-nowrap">
+          <div className="w-full">
             <div className="font-bold text-2xl text-center">{getStatus()}</div>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 w-full items-center">
-          {!isCreated && (
-            <>
+
+        <div className="flex flex-col md:flex-row justify-evenly items-center w-full">
+          {!isCreated ? (
+            <div className="flex flex-col md:flex-row justify-center items-center gap-2">
               <button
                 className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 flex items-center w-full whitespace-nowrap"
                 onClick={createRoom}
@@ -142,29 +145,43 @@ const Game = () => {
                 </span>
                 Create Board
               </button>
-              <div className="w-auto grid grid-cols-3 items-center">
-                <hr className="h-px" />
-                <span className="mx-auto">OR</span>
-                <hr className="h-px" />
+
+              <div>
+                <span>OR</span>
               </div>
-            </>
+
+              <div className="flex flex-col md:flex-row gap-2 justify-center items-center">
+                <input
+                  type="text"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  className="border border-gray-300 p-2 rounded w-full md:w-auto whitespace-nowrap"
+                  placeholder="Enter Room ID"
+                />
+                <button
+                  className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700 flex items-center w-full whitespace-nowrap"
+                  onClick={joinRoom}
+                >
+                  <span className="material-icons mr-2">
+                    <TbArrowsJoin />
+                  </span>
+                  Join Board
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              📋 Copy room id:{' '}
+              <span
+                className="font-bold hover:cursor-pointer"
+                onClick={() => copy(roomId)}
+              >
+                {id}
+              </span>
+            </div>
           )}
-          <input
-            type="text"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            className="border border-gray-300 p-2 rounded w-full md:w-auto whitespace-nowrap"
-            placeholder="Enter Room ID"
-          />
-          <button
-            className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700 flex items-center w-full whitespace-nowrap"
-            onClick={joinRoom}
-          >
-            <span className="material-icons mr-2">
-              <TbArrowsJoin />
-            </span>
-            Join Board
-          </button>
+        </div>
+        {winner && (
           <button
             className="px-4 py-2 z-20 text-white bg-red-600 rounded hover:bg-red-700 flex items-center w-full md:w-auto whitespace-nowrap"
             onClick={restartGame}
@@ -174,7 +191,7 @@ const Game = () => {
             </span>
             Restart Game
           </button>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -1,10 +1,119 @@
-body {
-  font-family: 'Arial', sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Bungee+Spice&family=Press+Start+2P&display=swap');
+
+.boda {
+  font-family: 'Press Start 2P';
+  font-weight: 300;
+  font-size: small;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
   margin: 0;
   width: 100%;
-  background-color: #f3f4f6;
+  --dot-bg: rgb(255, 255, 255);
+  --dot-color: rgb(0, 0, 0);
+  --dot-size: 1px;
+  --dot-space: 15px;
+  background: radial-gradient(
+      circle at calc(var(--dot-space) / 2) calc(var(--dot-space) / 2),
+      var(--dot-color) var(--dot-size),
+      transparent 0
+    ),
+    radial-gradient(
+      circle at calc(var(--dot-space) / 2) calc(var(--dot-space) / 2),
+      var(--dot-bg) var(--dot-size),
+      transparent 0
+    ),
+    linear-gradient(
+        90deg,
+        var(--dot-bg) calc(var(--dot-space) - var(--dot-size)),
+        transparent 1%
+      )
+      center / var(--dot-space) var(--dot-space),
+    linear-gradient(
+        var(--dot-bg) calc(var(--dot-space) - var(--dot-size)),
+        transparent 1%
+      )
+      center / var(--dot-space) var(--dot-space),
+    var(--dot-color);
+  animation: glowingDots 5s ease infinite, moveBackground 40s linear infinite;
+}
+
+@keyframes glowingDots {
+  to {
+    --dot-color: rgba(0, 0, 0, 0.471);
+  }
+}
+
+@keyframes moveBackground {
+  to {
+    background-position: calc(2 * var(--dot-space)) 0, 0 0;
+  }
+}
+
+.nes-btn {
+  border-image-slice: 2;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-source: url('data:image/svg+xml;utf8,<?xml version="1.0" encoding="UTF-8" ?><svg version="1.1" width="5" height="5" xmlns="http://www.w3.org/2000/svg"><path d="M2 1 h1 v1 h-1 z M1 2 h1 v1 h-1 z M3 2 h1 v1 h-1 z M2 3 h1 v1 h-1 z" fill="rgb(33,37,41)" /></svg>');
+  border-image-outset: 2;
+  position: relative;
+  display: inline-block;
+  padding: 6px 8px;
+  margin: 4px;
+  text-align: center;
+  vertical-align: middle;
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAzElEQVRYR+2X0Q6AIAhF5f8/2jYXZkwEjNSVvVUjDpcrGgT7FUkI2D9xRfQETwNIiWO85wfINfQUEyxBG2ArsLwC0jioGt5zFcwF4OYDPi/mBYKm4t0U8ATgRm3ThFoAqkhNgWkA0jJLvaOVSs7j3qMnSgXWBMiWPXe94QqMBMBc1VZIvaTu5u5pQewq0EqNZvIEMCmxAawK0DNkay9QmfFNAJUXfgGgUkLaE7j/h8fnASkxHTz0DGIBMCnBeeM7AArpUd3mz2x3C7wADglA8BcWMZhZAAAAAElFTkSuQmCC)
+      14 0,
+    pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  color: #212529;
+  background-color: #fff;
+}
+
+@media all and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: 0.001dpcm) {
+  .nes-btn {
+    border-image-repeat: space;
+  }
+}
+
+@supports (-moz-appearance: meterbar) {
+  .nes-btn {
+    border-image-repeat: stretch;
+  }
+}
+
+.nes-btn::after {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  bottom: -4px;
+  left: -4px;
+  content: '';
+  box-shadow: inset -4px -4px #adafbc;
+}
+
+.nes-btn:hover {
+  color: #212529;
+  text-decoration: none;
+  background-color: #e7e7e7;
+}
+
+.nes-btn:hover::after {
+  box-shadow: inset -6px -6px #adafbc;
+}
+
+.nes-btn:focus {
+  box-shadow: 0 0 0 6px rgba(173, 175, 188, 0.3);
+}
+
+.nes-btn:active:not(.is-disabled)::after {
+  box-shadow: inset 4px 4px #adafbc;
+}
+
+.nes-btn:focus {
+  outline: 0;
 }
