@@ -1,4 +1,3 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
@@ -8,7 +7,7 @@ import Game from './pages/Game.jsx';
 import CPUGame from './pages/CPUGame.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  <>
     <Toaster position="top-center" reverseOrder={false} />
     <BrowserRouter>
       <Routes>
@@ -17,5 +16,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/cpu/game/:id" element={<CPUGame />} />
       </Routes>
     </BrowserRouter>
-  </React.StrictMode>
+  </>
 );

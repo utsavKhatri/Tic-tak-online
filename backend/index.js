@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const cron = require('node-cron');
+const { default: axios } = require('axios');
 
 const app = express();
 const server = http.createServer(app);
@@ -142,6 +144,10 @@ io.on('connection', (socket) => {
         winner: null,
         turn: turn,
       });
+
+      if (room.playerCount === 2) {
+        io.to(roomId).emit('bothPlayersJoined');
+      }
     } else if (!room) {
       socket.emit('roomError', { message: 'Room does not exist' });
     } else if (room.playerCount >= 2) {
@@ -152,8 +158,6 @@ io.on('connection', (socket) => {
   socket.on('restartGame', (roomId) => {
     const room = gameRooms[roomId];
     if (room) {
-      // delete that room from gameRooms
-      delete gameRooms[roomId];
       room.board = Array(9).fill(null);
       room.isXNext = true;
       io.to(roomId).emit('updateBoard', {
@@ -162,6 +166,7 @@ io.on('connection', (socket) => {
         winner: null,
         turn: 'X',
       });
+      delete gameRooms[roomId];
     }
   });
 
@@ -172,9 +177,40 @@ io.on('connection', (socket) => {
   socket.on('error', (error) => {
     console.error(`Socket error for player ${socket.id}: ${error.message}`);
   });
+
+  socket.on('disconnecting', () => {
+    const rooms = Object.keys(socket.rooms);
+    rooms.forEach((roomId) => {
+      const room = gameRooms[roomId];
+      if (room) {
+        room.playerCount--; // Decrement player count on disconnect
+
+        if (room.playerCount === 0) {
+          // Handle scenarios when both players disconnect
+          delete gameRooms[roomId]; // Remove the room if it becomes empty
+        } else {
+          // Handle when one player disconnects
+          io.to(roomId).emit('playerDisconnected', { player: room.isXNext ? 'O' : 'X' });
+        }
+      }
+    });
+  });
 });
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+cron.schedule('*/15 * * * *', () => {
+  Object.keys(gameRooms).forEach((roomId) => {
+    const roomData = gameRooms[roomId];
+    if (roomData.playerCount === 0 || roomData.playerCount === 1) {
+      delete gameRooms[roomId];
+      console.log(`Room ${roomId} removed due to empty or single player.`);
+    }
+  });
+  axios.get('https://example.com').then(() => {
+    console.log('success keep running');
+  });
 });
